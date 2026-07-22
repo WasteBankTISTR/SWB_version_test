@@ -310,7 +310,7 @@
             <div class="form-group"><label class="form-label"><span class="cfg-idLabel"></span></label><input type="text" id="regHouseNo" class="form-input" placeholder="" data-ph-key="idPlaceholder"></div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label class="form-label">คำนำหน้า</label><select id="regPrefix" class="form-select"><option value="นาย">นาย</option><option value="นาง">นาง</option><option value="นางสาว">นางสาว</option><option value="ด.ช.">ด.ช.</option><option value="ด.ญ.">ด.ญ.</option></select></div>
+            <div class="form-group"><label class="form-label">คำนำหน้า</label><select id="regPrefix" class="form-select"><option value="">— ไม่ระบุ —</option><option value="นาย">นาย</option><option value="นาง">นาง</option><option value="นางสาว">นางสาว</option><option value="ด.ช.">ด.ช.</option><option value="ด.ญ.">ด.ญ.</option><option value="ครู">ครู</option><option value="อาจารย์">อาจารย์</option></select></div>
             <div class="form-group"><label class="form-label"><span class="cfg-groupLabel"></span></label><select id="regZone" class="form-select" onchange="onRegZoneChange()"></select></div>
           </div>
           <div class="form-row">
@@ -839,7 +839,7 @@
 // ════════════════════════════════════════════════════════════════════════
 
 // 🔧 วาง URL /exec ของคุณตรงนี้ (เส้นเดียวกับที่ใช้ทดสอบใน test.html)
-var API_URL = "https://script.google.com/macros/s/AKfycbzPQ4Qmfq1jAjb2BUJR3-wG16sdMqm8oz2WknU2_v9Sd3WkVJUW7TDWQSinfrAEtzKgtQ/exec";
+var API_URL = "https://script.google.com/macros/s/AKfycbyj6H2F_PppL9M9KenprcIIdL4pr8sW8ieC5s6nPTZlABZHi3yfaFDk5F3NT6jYfnxjyA/exec";
 
 function apiFetch(action, data) {
   data = data || {};
@@ -2276,6 +2276,11 @@ function createMember(btn) {
   if (!data.houseNo || !data.firstName || !data.lastName || !data.zone) {
     showToast('กรุณากรอกข้อมูลให้ครบ', 'error'); return;
   }
+  // [prefix-staff] คำนำหน้าบังคับเฉพาะโซนนักเรียน (บุคลากรว่างได้)
+  var _pfxEl = document.getElementById('regPrefix');
+  if (_pfxEl && _pfxEl.dataset.optional !== '1' && !data.prefix) {
+    showToast('กรุณาเลือกคำนำหน้า', 'error'); return;
+  }
   btn.disabled = true;
   callServer('createMember', data, function(r) {
     setTimeout(function() { btn.disabled = false; }, 30000);
@@ -2353,6 +2358,16 @@ function onRegZoneChange() {
   var filtered = _gradesForZone(zoneSel.value, FO.grades || []);
   _fillSelect('regGrade', filtered, '-- เลือกชั้น --');
   if (prev && filtered.indexOf(prev) !== -1) gradeSel.value = prev;
+
+  // [prefix-staff] โซนที่ไม่มีชั้นให้เลือก = บุคลากร → คำนำหน้าไม่บังคับ (ตั้ง default เป็น "ไม่ระบุ")
+  //   โซนนักเรียน → ถ้ายังไม่ได้เลือกคำนำหน้า เด้งกลับไป "นาย" กันบันทึกโดยไม่มีคำนำหน้า
+  var pfx = document.getElementById('regPrefix');
+  if (pfx) {
+    var isStaff = (filtered.length === 0);
+    pfx.dataset.optional = isStaff ? '1' : '';
+    if (isStaff) { if (pfx.value === undefined) pfx.value = ''; }
+    else if (!pfx.value) pfx.value = 'นาย';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
